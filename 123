@@ -1,0 +1,110 @@
+To create a C# test project using MSTest to test the Protobuf schema, follow these steps:
+
+1. Create a new MSTest project
+Open a terminal and create a new MSTest project:
+
+sh
+Copy code
+dotnet new mstest -n ProtoTest.Tests
+cd ProtoTest.Tests
+2. Add Protobuf and test dependencies
+Add the necessary NuGet packages:
+
+sh
+Copy code
+dotnet add package Google.Protobuf
+dotnet add package Grpc.Tools
+dotnet add reference ../ProtoTest/ProtoTest.csproj
+3. Define the Protobuf file
+Ensure the schema.proto file is accessible in the ProtoTest project under a Protos directory.
+
+4. Modify the ProtoTest.csproj to include Protobuf compilation
+Make sure ProtoTest.csproj includes:
+
+xml
+Copy code
+<ItemGroup>
+  <Protobuf Include="Protos\schema.proto" />
+</ItemGroup>
+5. Write the test code
+Create a SchemaTests.cs file to test serialization and deserialization:
+
+SchemaTests.cs:
+
+csharp
+Copy code
+using System;
+using Google.Protobuf.WellKnownTypes;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Protos;
+
+namespace ProtoTest.Tests
+{
+    [TestClass]
+    public class SchemaTests
+    {
+        [TestMethod]
+        public void TestSerializationAndDeserialization()
+        {
+            // Create a sample Schema object
+            var schema = new Schema
+            {
+                Id = Guid.NewGuid().ToString(),
+                Header = new Schema.Types.Header
+                {
+                    Key = "sampleKey",
+                    DataType = "string",
+                    Label = "sampleLabel",
+                    MetaData = "md5hash",
+                    ValidFrom = Timestamp.FromDateTime(DateTime.UtcNow),
+                    Expiry = Timestamp.FromDateTime(DateTime.UtcNow.AddYears(1)),
+                    Entitlements = { "entitlement1", "entitlement2" }
+                },
+                _Ts = Timestamp.FromDateTime(DateTime.UtcNow),
+                Duplicates = { "duplicate1", "duplicate2" },
+                Payload = new Schema.Types.Payload
+                {
+                    Json = "{ \"sample\": \"data\" }"
+                },
+                ParentIds = 
+                {
+                    new Schema.Types.ParentId { Id = Guid.NewGuid().ToString(), DataType = "type1", Label = "label1", Key = "key1" },
+                    new Schema.Types.ParentId { Id = Guid.NewGuid().ToString(), DataType = "type2", Label = "label2", Key = "key2" }
+                }
+            };
+
+            // Serialize to binary
+            var binaryData = schema.ToByteArray();
+
+            // Deserialize from binary
+            var deserializedSchema = Schema.Parser.ParseFrom(binaryData);
+
+            // Validate that the deserialized object matches the original
+            Assert.AreEqual(schema.Id, deserializedSchema.Id);
+            Assert.AreEqual(schema.Header.Key, deserializedSchema.Header.Key);
+            Assert.AreEqual(schema.Header.DataType, deserializedSchema.Header.DataType);
+            Assert.AreEqual(schema.Header.Label, deserializedSchema.Header.Label);
+            Assert.AreEqual(schema.Header.MetaData, deserializedSchema.Header.MetaData);
+            Assert.AreEqual(schema.Header.ValidFrom, deserializedSchema.Header.ValidFrom);
+            Assert.AreEqual(schema.Header.Expiry, deserializedSchema.Header.Expiry);
+            CollectionAssert.AreEqual(schema.Header.Entitlements, deserializedSchema.Header.Entitlements);
+            Assert.AreEqual(schema._Ts, deserializedSchema._Ts);
+            CollectionAssert.AreEqual(schema.Duplicates, deserializedSchema.Duplicates);
+            Assert.AreEqual(schema.Payload.Json, deserializedSchema.Payload.Json);
+            Assert.AreEqual(schema.ParentIds.Count, deserializedSchema.ParentIds.Count);
+            for (int i = 0; i < schema.ParentIds.Count; i++)
+            {
+                Assert.AreEqual(schema.ParentIds[i].Id, deserializedSchema.ParentIds[i].Id);
+                Assert.AreEqual(schema.ParentIds[i].DataType, deserializedSchema.ParentIds[i].DataType);
+                Assert.AreEqual(schema.ParentIds[i].Label, deserializedSchema.ParentIds[i].Label);
+                Assert.AreEqual(schema.ParentIds[i].Key, deserializedSchema.ParentIds[i].Key);
+            }
+        }
+    }
+}
+6. Run the tests
+Execute the following command in the terminal to run the tests:
+
+sh
+Copy code
+dotnet test
